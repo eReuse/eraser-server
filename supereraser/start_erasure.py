@@ -1,24 +1,21 @@
 import sys
 import json
 import uuid
-import curses
 
 from lxml import etree
 from time import sleep
 from Queue import Queue
 
-from erwb.benchmark import benchmark_hdd
-from logging import getLogger
-from curses import wrapper, panel
 from threading import Thread, Event, Lock
 from subprocess import Popen, PIPE, check_output, CalledProcessError
 
 from erwb import serializers
 from erwb.conf import settings
-from erwb.inventory import HardDrive
 
 from erwb.utils import InventoryJSONEncoder as InvEncoder, convert_capacity
 from erwb.eraser import get_datetime
+
+from supereraser.utils import HardDriveErased as HardDrive
 
 
 def get_serialnumber(device_name):
@@ -32,7 +29,9 @@ def get_serialnumber(device_name):
 
 
 def is_root_mount(device):
-    devices_out, devices_err = Popen(['lsblk', "/dev/" + str(device), '-no', "MOUNTPOINT"], stdout=PIPE).communicate()
+    devices_out, devices_err = Popen(['lsblk', "/dev/" + str(device),
+                                      '-no', "MOUNTPOINT"],
+                                     stdout=PIPE).communicate()
     for mount in devices_out.decode().split("\n"):
         if mount == "/":
             return True
@@ -41,12 +40,16 @@ def is_root_mount(device):
 
 def get_devices():
     """
-    Get a dict with the sdX as keys and inside each one, another dict with the model name.
+    Get a dict with the sdX as keys and inside
+    each one, another dict with the model name.
     :return: dict
     """
     menu_list = {}
 
-    devices_out, devices_err = Popen(['lsblk', '--nodeps', '-bno', "TYPE,NAME,SIZE,MODEL"], stdout=PIPE).communicate()
+    devices_out, devices_err = Popen(['lsblk', '--nodeps', '-bno',
+                                      "TYPE,NAME,SIZE,MODEL"],
+                                     stdout=PIPE).communicate()
+
     for device in devices_out.decode().split("\n"):
         if device != "":
             device_parsed = device.split(" ")
@@ -63,130 +66,8 @@ def get_devices():
                     "size": int(device_size),
                     "serial": get_serialnumber(device_name)
                 }
+
     return menu_list
-
-
-def devices_oberver(dictionary):
-    devices = get_devices()
-    for device in devices.keys():
-        if device in dictionary:
-            pass
-
-
-class EraserStart(object):
-    def __init__(self):
-        self.loger = getLogger("Eraser Server")
-        self.stdscr = None
-
-        wrapper(self.start)
-
-    def init_screen(self):
-        if self.stdscr:
-            self.stdscr.clear()
-            curses.noecho()
-            curses.cbreak()
-            self.stdscr.keypad(True)
-        else:
-            self.loger.info("Cannot initialise when windows is hidden.")
-
-    def start(self, stdscr):
-        self.stdscr = stdscr
-        self.init_screen()
-
-        self.start_eraser_process()
-
-    def start_eraser_process(self):
-        curses.curs_set(0)
-
-        main_menu = EraserMenu(self.stdscr)
-        main_menu.display()
-
-
-class EraserMenu(object):
-    def __init__(self, stdscreen):
-        self.process = EraserProcess()
-
-        self.window = stdscreen.subwin(0, 0)
-        self.window.nodelay(1)
-        self.window.keypad(1)
-        self.panel = panel.new_panel(self.window)
-        self.panel.hide()
-        panel.update_panels()
-
-        self.old_device_list = None
-        self.position = 0
-        self.items = []
-
-    def navigate(self, n):
-        self.position = len(self.items)
-        self.position += n
-        if self.position < 0:
-            self.position = 0
-        elif self.position >= len(self.items):
-            self.position = len(self.items) - 1
-
-    def item_start(self):
-        pass
-
-    def item_stop(self):
-        return "exit"
-
-    def display(self):
-        self.panel.top()
-        self.panel.show()
-        self.window.refresh()
-        curses.doupdate()
-
-        while True:
-            # self.items = [("Start", "start")]
-            self.items = []
-            devices = self.process.get_list()
-
-            for device in devices:
-                if "OS device" in devices[device]["message"]:
-                    continue
-                if "label" in devices[device]:
-                    self.items.append((devices[device]["label"], device))
-
-            self.items.append(("Exit", "exit"))
-
-            self.window.clear()
-            self.position = len(self.items) - 1
-            self.window.addstr(20, 1, str(self.process.show_queue()), curses.A_NORMAL)
-
-            for index, item in enumerate(self.items):
-                if index == self.position:
-                    mode = curses.A_REVERSE
-                else:
-                    mode = curses.A_NORMAL
-
-                msg = '%d. %s' % (index, item[0])
-                self.window.addstr(2 + index, 5, msg, mode)
-
-            key = self.window.getch()
-
-            if key in [curses.KEY_ENTER, ord('\n')]:
-                if self.position == len(self.items) - 1:
-                    break
-                else:
-                    pass  # print(self.items[self.position][1])
-
-            elif key == curses.KEY_UP:
-                self.navigate(-1)
-
-            elif key == curses.KEY_DOWN:
-                self.navigate(1)
-
-            elif key == curses.KEY_ENTER:
-                if self.items[3] not in ["start", "exit"]:
-                    pass
-
-            curses.napms(5000)  # Sleep
-
-        self.window.clear()
-        self.panel.hide()
-        panel.update_panels()
-        curses.doupdate()
 
 
 class EraserProcess:
@@ -211,17 +92,21 @@ class EraserProcess:
 
     def devices_oberver(self, add_callback, rm_callback):
         while not self.stop_event.is_set():
-            devices = get_devices()
-            for device in devices.keys():
-                if device not in self.devices.keys():
-                    add_callback(device, devices[device])
             try:
-                for device in self.devices.keys():
-                    if device not in devices.keys():
-                        rm_callback(device)
-            except RuntimeError:
+                devices = get_devices()
+                for device in devices.keys():
+                    if device not in self.devices.keys():
+                        add_callback(device, devices[device])
+                try:
+                    for device in self.devices.keys():
+                        if device not in devices.keys():
+                            print("Removing {}".format(device))
+                            rm_callback(device)
+                except RuntimeError:
+                    pass
+                sleep(0.5)
+            except Exception as ex:
                 pass
-            sleep(0.5)
 
     def add_device(self, name, dictionary):
         self.devices[name] = dictionary
@@ -265,20 +150,21 @@ class EraserProcess:
             try:
                 if self.erase_queue.queue:
                     device_name = self.erase_queue.get()
-                    sleep(0.1)
+                    print(device_name)
+                    sleep(0.5)
 
                     setattr(self, "event_%s" % device_name, Event())
                     self.devices[device_name]["event"] = getattr(self, "event_%s" % device_name)
                     self.devices[device_name]["event"].clear()
 
-                    setattr(self, "thread_%s" % device_name, Thread(target=self._erase_process, args=(device_name, "")))
+                    setattr(self, "thread_%s" % device_name, Thread(target=self._erase_process, args=(device_name,)))
                     self.devices[device_name]["thread"] = getattr(self, "thread_%s" % device_name)
                     self.devices[device_name]["thread"].setDaemon(True)
                     self.devices[device_name]["thread"].start()
             except Exception as ex:
                 sys.stderr.write(ex)
 
-    def _erase_process(self, device_name, test):
+    def _erase_process(self, device_name):
         try:
             self.prepare_device(device_name)
             stop_event = getattr(self, "event_%s" % device_name)
@@ -286,6 +172,8 @@ class EraserProcess:
 
             mode = settings.get('eraser', 'MODE')
             zeros = settings.getboolean('eraser', 'ZEROS')
+            self.devices[device_name]["mode"] = mode
+            self.devices[device_name]["write_zeros"] = zeros
 
             data['_uuid'] = str(uuid.uuid4())
 
@@ -298,13 +186,20 @@ class EraserProcess:
             data["erasure"]["steps"] = []
 
             total_steps = settings.getint('eraser', 'STEPS')
+
             if zeros:
                 print_total_steps = total_steps + 1
             else:
                 print_total_steps = total_steps
 
+            self.devices[device_name]["total_steps"] = print_total_steps
+            self.devices[device_name]["current_step"] = 0
+
+            current_step = 0
             for current_step in range(1, total_steps + 1):
+                self.devices[device_name]["current_step"] = current_step
                 start_time = get_datetime()
+                self.devices[device_name]["current_step_start"] = start_time
                 if stop_event.is_set():
                     return
                 try:
@@ -322,11 +217,15 @@ class EraserProcess:
                 )
 
             if zeros:
+                current_step += 1
                 start_time = get_datetime()
+
+                self.devices[device_name]["current_step"] = current_step
+                self.devices[device_name]["current_step_start"] = start_time
                 if stop_event.is_set():
                     return
                 try:
-                    print_step = "{current}/{total}".format(current=current_step + 1, total=print_total_steps)
+                    print_step = "{current}/{total}".format(current=current_step, total=print_total_steps)
                     result_zeros = self._do_zero_step(device_name, print_step)
                 except (KeyError, CalledProcessError) as ex:
                     self.devices[device_name]["message"] = "Error: {}".format(ex or "Unknown error.")
@@ -406,35 +305,40 @@ class EraserProcess:
     def get_hardware_object(self, device_name):
         with self.lshw_permission:
             self.lshw_xml = etree.fromstring(check_output(["lshw", "-xml"]))
-            for item in [hd for hd in HardDrive.retrieve(self.lshw_xml)]:
+            for item in HardDrive.retrieve(self.lshw_xml):
                 if str(item.logical_name).endswith(device_name):
                     self.devices_objects[device_name] = item
                     self.devices_objects[device_name].type = "HardDrive"
 
     def get_list(self):
         """ List all devices ready to print on terminal. """
+        devices = {}
         try:
             for device in self.devices:
                 text = "- %s -" % self.devices[device]["message"] if "message" in self.devices[device].keys() else ""
-                self.devices[device]["label"] = "{device}, {model} ({size} GB) {message}".format(
-                    device=device,
-                    model=self.devices[device]["model"],
-                    size=round(convert_capacity(self.devices[device]["size"], "bytes", "GB"), 2),
-                    message=text)
+                devices[device] = {
+                    'model': self.devices[device]["model"],
+                    'size': self.devices[device]["size"],
+                    'serial': self.devices[device]["serial"],
+                    'capacity': str(round(convert_capacity(self.devices[device]["size"], "bytes", "GB"), 2)) + "GB",
+                }
+                items = ["mode", "write_zeros", "current_step", "total_steps", "current_step_start"]
+                for name in items:
+                    if name in self.devices[device].keys():
+                        devices[device][name] = self.devices[device][name]
 
-            return self.devices
+            return devices
         except RuntimeError:
             return {}
 
 
 if __name__ == '__main__':
     try:
-        EraserStart()
-        # d = EraserProcess()
-        # while True:
-        #     sleep(1)
-        #     print("\n")
-        #     print(d.get_list())
+        erasure = EraserProcess()
+        while True:
+            sleep(1)
+            jaison = erasure.get_list()
+            print "\n"*10 + json.dumps(jaison, indent=4, sort_keys=True)
 
     except KeyboardInterrupt:
         print("Exited")

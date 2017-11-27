@@ -1,0 +1,6 @@
+{
+    "@type": "Snapshot", 
+    "_uuid": "2d943327-8947-456d-b513-ffe4bb6d1ae6", 
+    "components": [], 
+    "device": {
+        "@type": "HardDriveErased"

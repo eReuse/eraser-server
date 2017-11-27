@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='eraser',
+    name='EraserManager',
     version='0.1',
     packages=find_packages(exclude=('contrib', 'docs', 'scripts')),
     url='https://github.com/eReuse/DeviceHub',
