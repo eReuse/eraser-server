@@ -11,7 +11,7 @@ setup(
     description='Massively and securely erase hard-drives.',
     # Updated in 2017-07-29
     install_requires=[
-        'ereuse-workbench==8.0.0beta1'
+        'ereuse-workbench'
     ],
     dependency_links=[
         'git+https://github.com/ereuse/workbench#egg=ereuse-workbench-8.0.0beta1'

@@ -1,12 +1,1 @@
-# Packages with platform-independent Python dependencies:
-lxml
-requests
-
-# gnupg
-# dmidecode
-
-# Packages from the Debian repository:
-# deb:smartmontools
-# deb:gnupg
-
-# ereuse_workbench
+ereuse_workbench
