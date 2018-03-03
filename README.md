@@ -1,11 +1,16 @@
-# Repository status
+
+
+# Eraser Server
+
+Massively and securely erases hard-drives, internally using eReuse.org Workbench.
+
+Current status
+--------------
+
 [![Code Health](https://landscape.io/github/eReuse/eraser-server/master/landscape.svg?style=flat)](https://landscape.io/github/eReuse/eraser-server/master)
 
 Repository health checked with: [landscape.io](https://landscape.io/github/pedrotgn/pyactor)
 
-# eraser
-
-Massively and securely erases hard-drives, internally using eReuse.org Workbench.
 
 Installation
 ------------
