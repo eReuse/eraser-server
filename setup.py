@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='eraser',
+    name='EraserManager',
     version='0.1',
     packages=find_packages(exclude=('contrib', 'docs', 'scripts')),
     url='https://github.com/eReuse/DeviceHub',
@@ -11,7 +11,7 @@ setup(
     description='Massively and securely erase hard-drives.',
     # Updated in 2017-07-29
     install_requires=[
-        'ereuse-workbench==8.0.0beta1'
+        'ereuse-workbench'
     ],
     dependency_links=[
         'git+https://github.com/ereuse/workbench#egg=ereuse-workbench-8.0.0beta1'
