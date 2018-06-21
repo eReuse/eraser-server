@@ -52,7 +52,7 @@ We use [SemVer](https://semver.org/) for versioning. For the versions available,
 * **Xavier** - *Initial work* - [bustawin](https://github.com/bustawin)
 * **Adrià** - *Maintenance and developing work* - [adriass](https://github.com/adriass)
 
-This project is a part of eReuse Workbench tools.  [[webpage](https://www.ereuse.org/)] [[github](https://www.ereuse.org/)]
+This project is a part of eReuse Workbench tools.  [[webpage](https://www.ereuse.org/)] [[github](https://github.com/eReuse/)]
 
 ## License
 
